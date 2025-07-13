@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Doctor - Repair Tracker</title>
+    <meta name="description" content="Track your mobile device repair status with Mobile Doctor's real-time tracker. Enter your repair ID to get instant updates.">
+    <link rel="icon" type="image/png" href="https://placehold.co/32x32/8B5CF6/FFFFFF?text=MD"> <!-- Placeholder for favicon -->
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Content Security Policy (CSP) - IMPORTANT for security -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' https://cdn.tailwindcss.com https://www.gstatic.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://jspm.dev;
+        style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com;
+        img-src 'self' data: https://placehold.co;
+        font-src 'self' https://fonts.gstatic.com;
+        connect-src 'self' https://mobile-doctor-repair-status.firebaseio.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com;
+    ">
+</head>
+<body class="min-h-screen flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-100 to-purple-100 text-gray-800 font-inter">
+
+    <!-- Loading Spinner & Message Box -->
+    <div id="loading-spinner" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex flex-col items-center justify-center z-[10001] hidden transition-opacity duration-300 opacity-0">
+        <div class="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-purple-500 mb-6"></div>
+        <p class="text-white text-xl font-semibold" id="loading-message">Connecting to Mobile Doctor Database...</p>
+    </div>
+
+    <div id="customMessageBox" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-[10000] hidden backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center transform scale-95 opacity-0 transition-all duration-300 ease-out">
+            <p id="messageBoxContent" class="text-lg font-semibold mb-6 text-gray-800"></p>
+            <button id="messageBoxCloseButton" class="bg-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors duration-200 shadow-md">OK</button>
+        </div>
+    </div>
+
+    <!-- Header Section -->
+    <header class="w-full max-w-5xl bg-white rounded-2xl shadow-xl p-8 mb-10 text-center border border-purple-200 animate-fadeInUp">
+        <h1 class="text-5xl font-extrabold text-purple-800 mb-3 flex items-center justify-center">
+            <span class="text-6xl mr-4 transform rotate-6">📱</span> Mobile Doctor
+        </h1>
+        <p class="text-xl text-gray-600 font-medium">Your device's health, tracked in real-time.</p>
+    </header>
+
+    <main class="w-full max-w-5xl">
+        <!-- Customer View Section -->
+        <section id="customer-view" class="bg-white rounded-2xl shadow-xl p-8 mb-10 border border-blue-200 animate-fadeInUp delay-100">
+            <h2 class="text-3xl font-bold text-center text-blue-700 mb-8">Check Repair Status</h2>
+            <div class="flex flex-col sm:flex-row gap-5 mb-8">
+                <input
+                    type="text"
+                    id="repairIdInput"
+                    placeholder="Enter Your Repair ID (e.g., MD-ABCDE)"
+                    class="flex-grow p-4 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-300 focus:border-blue-500 outline-none transition-all duration-300 text-lg"
+                />
+                <button
+                    id="checkStatusButton"
+                    class="bg-blue-600 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition-colors duration-300 flex items-center justify-center text-lg transform hover:scale-105"
+                >
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    Check Status
+                </button>
+            </div>
+
+            <div id="repairStatusDisplay" class="hidden bg-blue-50 p-7 rounded-xl border border-blue-300 text-center animate-fadeIn">
+                <h3 id="displayDeviceName" class="text-3xl font-bold text-blue-800 mb-4"></h3>
+                <p class="text-lg text-gray-700 mb-2 hidden" id="displayModelNumberContainer"><span class="font-semibold text-blue-600">Model:</span> <span id="displayModelNumber"></span></p>
+                <p class="text-lg text-gray-700 mb-2 hidden" id="displayCustomerNameContainer"><span class="font-semibold text-blue-600">Customer:</span> <span id="displayCustomerName"></span></p>
+                <p class="text-lg text-gray-700 mb-2 hidden" id="displayPhoneNumberContainer"><span class="font-semibold text-blue-600">Phone:</span> <span id="displayPhoneNumber"></span></p>
+                <p class="text-2xl mb-3"><span class="font-semibold text-blue-700">Status:</span> <span id="displayStatus" class="font-bold"></span></p>
+                <p class="text-md text-gray-600"><span class="font-semibold">Last Updated:</span> <span id="displayLastUpdated"></span></p>
+                <p id="displayNotesContainer" class="text-md text-gray-700 mt-4 hidden"><span class="font-semibold text-blue-600">Notes:</span> <span id="displayNotes"></span></p>
+                <button
+                    id="printRepairButton"
+                    class="hidden mt-6 bg-gray-500 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-600 transition-colors duration-200 inline-flex items-center text-md shadow-md transform hover:scale-105"
+                >
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0l-4 4m4-4l4 4m-4-4v-4m-2 4h4m6 0h2m-4 0a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    Print Ticket
+                </button>
+            </div>
+        </section>
+
+        <!-- Admin Access Section -->
+        <section id="admin-section" class="bg-white rounded-2xl shadow-xl p-8 border border-purple-200 animate-fadeInUp delay-200">
+            <h2 class="text-3xl font-bold text-center text-purple-700 mb-8">Admin Access</h2>
+
+            <!-- Admin Login Form -->
+            <div id="admin-login" class="mb-10 p-7 bg-purple-50 rounded-xl border border-purple-300">
+                <h3 class="text-2xl font-semibold text-purple-800 mb-5 text-center">Admin Login</h3>
+                <input
+                    type="email"
+                    id="adminEmailInput"
+                    placeholder="Admin Email"
+                    class="w-full p-4 border border-gray-300 rounded-lg focus:ring-4 focus:ring-purple-300 outline-none mb-5 text-lg"
+                />
+                <input
+                    type="password"
+                    id="adminPasswordInput"
+                    placeholder="Admin Password"
+                    class="w-full p-4 border border-gray-300 rounded-lg focus:ring-4 focus:ring-purple-300 outline-none mb-6 text-lg"
+                />
+                <button
+                    id="adminLoginButton"
+                    class="w-full bg-purple-600 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:bg-purple-700 transition-colors duration-300 transform hover:scale-105 text-lg"
+                >
+                    Login as Admin
+                </button>
+            </div>
+
+            <!-- Admin Dashboard (Hidden by default) -->
+            <div id="admin-dashboard" class="hidden">
+                <button
+                    id="adminLogoutButton"
+                    class="bg-red-500 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:bg-red-600 transition-colors duration-200 mb-8 float-right transform hover:scale-105"
+                >
+                    <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    Logout
+                </button>
+                <div class="clearfix"></div> <!-- Clear float -->
+
+                <!-- Add New Repair Section -->
+                <div class="mb-10 p-7 bg-purple-50 rounded-xl border border-purple-300 animate-fadeIn">
+                    <h3 class="text-2xl font-semibold text-purple-800 mb-5 text-center">Add New Repair</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+                        <div class="col-span-full sm:col-span-1 flex gap-3">
+                            <input
+                                type="text"
+                                id="newRepairId"
+                                placeholder="Repair ID (e.g., MD-ABCDE)"
+                                class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                                readonly
+                            />
+                            <button
+                                id="generateRepairIdButton"
+                                class="bg-blue-500 text-white px-5 py-2 rounded-lg text-md font-semibold hover:bg-blue-600 transition-colors duration-200 shadow-sm transform hover:scale-105"
+                                title="Generate Unique Repair ID"
+                            >
+                                Generate ID
+                            </button>
+                        </div>
+                        <input
+                            type="text"
+                            id="newDeviceName"
+                            placeholder="Device Name (e.g., iPhone 13 Pro)"
+                            class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                            required
+                        />
+                        <input
+                            type="text"
+                            id="newModelNumber"
+                            placeholder="Model Number (Optional)"
+                            class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                        />
+                        <input
+                            type="text"
+                            id="newCustomerName"
+                            placeholder="Customer Name (Optional)"
+                            class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                        />
+                        <input
+                            type="tel"
+                            id="newPhoneNumber"
+                            placeholder="Phone Number (Optional)"
+                            class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                        />
+                        <select
+                            id="newStatus"
+                            class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg bg-white"
+                        >
+                            <option value="Received">Received</option>
+                            <option value="Diagnosing">Diagnosing</option>
+                            <option value="Repairing">Repairing</option>
+                            <option value="Ready for Pickup">Ready for Pickup</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        <textarea
+                            id="newNotes"
+                            placeholder="Notes (e.g., Screen replaced, new battery installed)"
+                            rows="3"
+                            class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none col-span-full text-lg"
+                        ></textarea>
+                    </div>
+                    <button
+                        id="addRepairButton"
+                        class="w-full bg-purple-600 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:bg-purple-700 transition-colors duration-300 flex items-center justify-center text-lg transform hover:scale-105"
+                    >
+                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Add New Repair
+                    </button>
+                </div>
+
+                <!-- New Repair Data JSON View -->
+                <div class="mb-10 p-7 bg-gray-800 text-white rounded-xl border border-gray-700 animate-fadeIn">
+                    <h3 class="text-2xl font-semibold text-white mb-5 text-center">New Repair Data (JSON View)</h3>
+                    <pre id="newRepairCodeView" class="bg-gray-900 p-5 rounded-lg text-sm overflow-x-auto font-mono border border-gray-700">
+                        {
+                            "repairId": "...",
+                            "deviceName": "...",
+                            "modelNumber": "...",
+                            "customerName": "...",
+                            "phoneNumber": "...",
+                            "status": "...",
+                            "notes": "...",
+                            "lastUpdated": "...",
+                            "createdAt": "..."
+                        }
+                    </pre>
+                </div>
+
+                <!-- Admin Controls (Search, Filter, Sort) -->
+                <div class="mb-8 p-6 bg-gray-100 rounded-xl border border-gray-300 flex flex-col sm:flex-row gap-4 items-center animate-fadeIn">
+                    <input
+                        type="text"
+                        id="adminSearchInput"
+                        placeholder="Search by ID, Device, Customer, Phone..."
+                        class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-md"
+                    />
+                    <select
+                        id="adminFilterStatus"
+                        class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-md bg-white"
+                    >
+                        <option value="All">Filter by Status (All)</option>
+                        <option value="Received">Received</option>
+                        <option value="Diagnosing">Diagnosing</option>
+                        <option value="Repairing">Repairing</option>
+                        <option value="Ready for Pickup">Ready for Pickup</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                    <select
+                        id="adminSortBy"
+                        class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-md bg-white"
+                    >
+                        <option value="lastUpdated">Sort by Last Updated (Newest)</option>
+                        <option value="deviceName">Sort by Device Name (A-Z)</option>
+                        <option value="status">Sort by Status</option>
+                    </select>
+                </div>
+
+                <!-- Existing Repairs List -->
+                <h3 class="text-2xl font-bold text-purple-700 mb-5">Existing Repairs</h3>
+                <div id="repairsList" class="space-y-5">
+                    <p class="text-center text-gray-600 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200">Loading repairs...</p>
+                </div>
+
+                <!-- Edit Repair Modal (Hidden by default) -->
+                <div id="editRepairModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[10000] backdrop-blur-sm">
+                    <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-lg w-full transform scale-95 opacity-0 transition-all duration-300 ease-out border border-purple-300">
+                        <h3 id="editModalTitle" class="text-3xl font-bold text-purple-700 mb-6 text-center">Edit Repair: </h3>
+                        <div class="space-y-5 mb-6">
+                            <div>
+                                <label for="editDeviceName" class="block text-gray-700 text-md font-bold mb-2">Device Name:</label>
+                                <input
+                                    type="text"
+                                    id="editDeviceName"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                                />
+                            </div>
+                            <div>
+                                <label for="editModelNumber" class="block text-gray-700 text-md font-bold mb-2">Model Number (Optional):</label>
+                                <input
+                                    type="text"
+                                    id="editModelNumber"
+                                    placeholder="Model Number (Optional)"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                                />
+                            </div>
+                            <div>
+                                <label for="editCustomerName" class="block text-gray-700 text-md font-bold mb-2">Customer Name (Optional):</label>
+                                <input
+                                    type="text"
+                                    id="editCustomerName"
+                                    placeholder="Customer Name (Optional)"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                                />
+                            </div>
+                            <div>
+                                <label for="editPhoneNumber" class="block text-gray-700 text-md font-bold mb-2">Phone Number (Optional):</label>
+                                <input
+                                    type="tel"
+                                    id="editPhoneNumber"
+                                    placeholder="Phone Number (Optional)"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                                />
+                            </div>
+                            <div>
+                                <label for="editStatus" class="block text-gray-700 text-md font-bold mb-2">Status:</label>
+                                <select
+                                    id="editStatus"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg bg-white"
+                                >
+                                    <option value="Received">Received</option>
+                                    <option value="Diagnosing">Diagnosing</option>
+                                    <option value="Repairing">Repairing</option>
+                                    <option value="Ready for Pickup">Ready for Pickup</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="editNotes" class="block text-gray-700 text-md font-bold mb-2">Notes:</label>
+                                <textarea
+                                    id="editNotes"
+                                    rows="4"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-lg"
+                                ></textarea>
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-4">
+                            <button
+                                id="cancelEditButton"
+                                class="bg-gray-300 text-gray-800 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-colors duration-200 shadow-md transform hover:scale-105"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                id="saveEditButton"
+                                class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center transform hover:scale-105"
+                            >
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Save Changes
+                            </button>
+                        </div>
+                        <div class="mt-8 p-5 bg-gray-700 text-white rounded-xl border border-gray-600">
+                            <h4 class="text-xl font-semibold mb-4">Updated Data (JSON View)</h4>
+                            <pre id="editRepairCodeView" class="bg-gray-900 p-4 rounded-lg text-sm overflow-x-auto font-mono border border-gray-700">
+                                </pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="mt-16 text-center text-gray-600 text-sm">
+        <p>&copy; <span id="currentYear"></span> Mobile Doctor. All rights reserved.</p>
+        <p class="mt-2">Your User ID: <span id="displayUserId" class="font-mono text-xs break-all text-gray-700"></span></p>
+    </footer>
+
+    <!-- Main JavaScript File -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>

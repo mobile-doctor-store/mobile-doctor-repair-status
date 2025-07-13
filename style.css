@@ -1,0 +1,88 @@
+/* General Body and Font Styles */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f8fafc; /* Lighter background for professionalism */
+    line-height: 1.6;
+    color: #334155; /* Darker text for readability */
+}
+
+/* Animations */
+.animate-fadeInUp {
+    animation: fadeInUp 0.6s ease-out forwards;
+    opacity: 0; /* Start invisible */
+    transform: translateY(20px); /* Start slightly below */
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.animate-spin {
+    animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Custom Message Box Styles */
+#customMessageBox > div {
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Specific styling for the admin dashboard list items */
+#repairsList .bg-gray-50 {
+    transition: all 0.2s ease-in-out;
+    border-radius: 0.75rem; /* rounded-xl */
+}
+
+#repairsList .bg-gray-50:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* General input and button focus styles for better UX */
+input:focus, select:focus, textarea:focus {
+    border-color: transparent; /* Remove default border focus */
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.4); /* Tailwind purple-500 equivalent shadow */
+    outline: none; /* Remove default outline */
+}
+
+/* For better handling of hidden elements with Tailwind's hidden class */
+.hidden {
+    display: none !important;
+}
+
+/* Custom Message Box - Error and Success Styles */
+#customMessageBox.error > div {
+    border: 2px solid #ef4444; /* Red border for error */
+}
+#customMessageBox.success > div {
+    border: 2px solid #22c55e; /* Green border for success */
+}
+
+/* Status specific colors */
+.status-received { color: #3b82f6; /* blue-500 */ }
+.status-diagnosing { color: #f59e0b; /* amber-500 */ }
+.status-repairing { color: #f97316; /* orange-500 */ }
+.status-ready { color: #22c55e; /* green-500 */ }
+.status-completed { color: #8b5cf6; /* purple-500 */ }
+.status-cancelled { color: #ef4444; /* red-500 */ }
